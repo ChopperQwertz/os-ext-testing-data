@@ -8,10 +8,9 @@
           echo "Hello world, this is the {vendor} Testing System"
       - link-logs  # In macros.yaml from os-ext-testing
 
-#    publishers:
-#      - devstack-logs  # In macros.yaml from os-ext-testing
-#      - console-log  # In macros.yaml from os-ext-testing
-
+    publishers:
+      - devstack-logs  # In macros.yaml from os-ext-testing
+      - console-log  # In macros.yaml from os-ext-testing
 
 - job-template:
     name: 'dsvm-tempest-full'
@@ -29,7 +28,7 @@
       - shell: |
           #!/bin/bash -xe
           if [ -z $ZUUL_PROJECT ]; then
-              export ZUUL_PROJECT=openstack-dev/sandbox
+              export ZUUL_PROJECT=openstack-dev/ci-sandbox
           fi
           if [ -z $ZUUL_BRANCH ]; then
               export ZUUL_BRANCH=master
@@ -38,10 +37,12 @@
           export DEVSTACK_GATE_TIMEOUT=180
           export DEVSTACK_GATE_TEMPEST=1
           export RE_EXEC=true
+          ulimit -Ha
           cp devstack-gate/devstack-vm-gate-wrap.sh ./safe-devstack-vm-gate-wrap.sh
           ./safe-devstack-vm-gate-wrap.sh
       - link-logs  # In macros.yaml from os-ext-testing
 
-#    publishers:
-#      - devstack-logs  # In macros.yaml from os-ext-testing
-#      - console-log  # In macros.yaml from os-ext-testing
+    publishers:
+      - devstack-logs  # In macros.yaml from os-ext-testing
+      - console-log  # In macros.yaml from os-ext-testing
+

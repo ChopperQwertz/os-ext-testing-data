@@ -1,10 +1,12 @@
 - project:
-    name: sandbox
+    name: ci-sandbox
     github-org: openstack-dev
     node: master
-    vendor: myvendor
+    vendor: Infortrend
 
     jobs:
         - noop-check-communication
         - dsvm-tempest-full:
+            node: 'devstack_slave || devstack-precise-check || d-p-c'
+        - dsvm-tempest-ift-driver-volume-test:
             node: 'devstack_slave || devstack-precise-check || d-p-c'

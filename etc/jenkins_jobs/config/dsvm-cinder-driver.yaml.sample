@@ -1,10 +1,10 @@
 - job-template:
-    name: 'dsvm-tempest-my-cinder-driver'
+    name: 'dsvm-tempest-ift-driver-volume-test'
     node: '{node}'
 
     wrappers:
       - timeout:
-          timeout: 125
+          timeout: 180
           fail: true
       - timestamps
 
@@ -14,35 +14,79 @@
       - devstack-checkout
       - shell: |
           #!/bin/bash -xe
+          
+          # environment variables
+          # TODO: check all these value are correct
+          export CINDER_DIR=/home/jenkins/cinder-ift-driver
+          export CINDER_REPO_IP=172.27.112.162
+          export CLONE_DRIVER=1
+          export IFT_DRIVER_BRANCH=dvt_dev
+          export IFT_RAID_BACKEND_NAME=infortrenddriver-1
+          export IFT_RAID_POOL_NAME=LV-1
+          export IFT_RAID_LOG_IN=infortrend
+          export IFT_RAID_PASSWORD=111111
+          export IFT_RAID_IP=172.27.112.166
 
+          # infortrend storage link check
+          ping -q -c1 $IFT_RAID_IP > /dev/null
+          if [ $? -eq 0 ]; then
+              echo "Infortrend RAID IP $IFT_RAID_IP Pingable, keep going"
+          else
+              echo "Infortrend RAID IP $IFT_RAID_IP Not Pingable, exit Job!"
+              exit 0
+          fi 
+          
+          # install infortrend driver to cinder project, copy to workspace later
+          if [[ "$CLONE_DRIVER" -eq "1" ]]; then
+              rm -rf $CINDER_DIR
+              git clone git@$CINDER_REPO_IP:/cinder $CINDER_DIR -b $IFT_DRIVER_BRANCH
+              if [ ! -d "$CINDER_DIR" ]; then
+                  echo "Not find infortrend driver"
+                  exit 0
+              fi
+          fi
+
+          # setup pre_test_hook (It will pre hook before setup openstack environment)
           function pre_test_hook {{
-              echo "Install thirdparty client libraries" 
-              #TODO: update your client here if needed, otherwise delete
-              sudo pip install mydriverclient
+              echo "Install infortrend driver libraries" 
+              # Update infortend driver to cinder project
+              mkdir -p $BASE/new/cinder/cinder/volume/drivers/infortrend
+              cp $CINDER_DIR/cinder/volume/drivers/infortrend/* $BASE/new/cinder/cinder/volume/drivers/infortrend -r
+              if [[ ! -f /home/ift/cache/files/Fedora-x86_64-20-20140618-sda.qcow2 ]]; then
+                  cp /home/ift/cache/files/Fedora-x86_64-20-20140618-sda.qcow2 $BASE/new/devstack/files/
+              fi
               echo "Configure the local.conf file to properly setup hp lefthand driver in cinder.conf"
               cat <<EOF >$BASE/new/devstack/local.conf
 
+          # config cinder.conf
           [[post-config|\$CINDER_CONF]]
           [DEFAULT]
-          enabled_backends=mybackend
-          default_volume_type=myvolumetype
+          enabled_backends=$IFT_RAID_BACKEND_NAME
+          default_volume_type=$IFT_RAID_BACKEND_NAME
 
-          [mybackend]
-          # add you driver configuration here
-          volume_driver=cinder.volume.drivers.MyDriver
-          volume_backend_name=mybackend
+          [infortrenddriver-1]
+          volume_driver=cinder.volume.drivers.infortrend.infortrend_iscsi_cli.InfortrendCLIISCSIDriver
+          volume_backend_name=$IFT_RAID_BACKEND_NAME
+          infortrend_pool_name=$IFT_RAID_POOL_NAME
+          san_login=$IFT_RAID_LOG_IN
+          #san_password=$IFT_RAID_PASSWORD
+          san_ip=$IFT_RAID_IP
+          #infortrend_thin_provisioning=thick
+          #infortrend_remote_replication=TRUE
+          #infortrend_tiering=0,1
+          #infortrend_ssd_cache=TRUE
 
           # Use post-extra because the tempest configuration file is
           # overwritten with the .sample after post-config.
           [[post-extra|\$TEMPEST_CONFIG]]
           [volume]
           storage_protocol=iSCSI
-          vendor_name=MyVendor
+          vendor_name=Infortrend
           EOF
 
               echo "Configure localrc file to properly setup CINDER_ENABLED_BACKENDS"
               cat <<EOF >>$BASE/new/devstack/localrc
-          CINDER_ENABLED_BACKENDS=mybackend:myvolumetype
+          CINDER_ENABLED_BACKENDS=$IFT_RAID_BACKEND_NAME
           EOF
 
           }}
@@ -52,10 +96,14 @@
           # To keep our CINDER_ENABLED_BACKENDS configuration in localrc
           export KEEP_LOCALRC=true
 
+          # setup TEMPEST environment variables
           export PYTHONUNBUFFERED=true
-          export DEVSTACK_GATE_TIMEOUT=120
+          export DEVSTACK_GATE_TIMEOUT=180
           export DEVSTACK_GATE_TEMPEST=1
           export DEVSTACK_GATE_TEMPEST_REGEX="tempest.api.volume."
+
+          # set tempest concurrency to 1
+          #export TEMPEST_CONCURRENCY=1
 
           # Let's use the http protocol instead of git protocol
           # export GIT_BASE="http://github.com"

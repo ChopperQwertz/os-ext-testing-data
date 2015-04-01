@@ -121,7 +121,7 @@
           cp devstack-gate/devstack-vm-gate-wrap.sh ./safe-devstack-vm-gate-wrap.sh
 
           # in safe-devstack-vm-gate-wrap, move logs to jenkins workspace
-          sed -i 's/exit $RETVAL/sudo mv $BASE\/logs\/* $WORKSPACE\/logs -r\nexit $RETVAL/g' safe-devstack-vm-gate-wrap.sh
+          sed -i 's/exit $RETVAL/sudo mv $BASE\/logs\/* $WORKSPACE\/logs\nexit $RETVAL/g' safe-devstack-vm-gate-wrap.sh
 
           # execute jobs!
           ./safe-devstack-vm-gate-wrap.sh

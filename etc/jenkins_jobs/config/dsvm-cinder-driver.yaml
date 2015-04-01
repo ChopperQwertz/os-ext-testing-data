@@ -55,6 +55,9 @@
               if [[ ! -f /home/ift/cache/files/Fedora-x86_64-20-20140618-sda.qcow2 ]]; then
                   cp /home/ift/cache/files/Fedora-x86_64-20-20140618-sda.qcow2 $BASE/new/devstack/files/
               fi
+              # clear log if exist previous job's log
+              rm $BASE/logs/* -r
+
               echo "Configure the local.conf file to properly setup hp lefthand driver in cinder.conf"
               cat <<EOF >$BASE/new/devstack/local.conf
 
@@ -110,15 +113,19 @@
           export GIT_BASE="https://review.openstack.org/p"
 
           if [ -z $ZUUL_PROJECT ]; then
-              export ZUUL_PROJECT=openstack-dev/sandbox
+              export ZUUL_PROJECT=openstack-dev/ci-sandbox
           fi
           if [ -z $ZUUL_BRANCH ]; then
               export ZUUL_BRANCH=master
           fi
-
           cp devstack-gate/devstack-vm-gate-wrap.sh ./safe-devstack-vm-gate-wrap.sh
-          ./safe-devstack-vm-gate-wrap.sh
 
+          # in safe-devstack-vm-gate-wrap, move logs to jenkins workspace
+          sed -i 's/exit $RETVAL/sudo mv $BASE\/logs\/* $WORKSPACE\/logs -r\nexit $RETVAL/g' safe-devstack-vm-gate-wrap.sh
+
+          # execute jobs!
+          ./safe-devstack-vm-gate-wrap.sh
+          
     publishers:
       - devstack-logs
       - console-log

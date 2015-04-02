@@ -26,6 +26,8 @@
           export IFT_RAID_LOG_IN=infortrend
           export IFT_RAID_PASSWORD=111111
           export IFT_RAID_IP=172.27.112.166
+          export DEVSTACK_LOG_FILE_PATH=/opt/stack/logs/*
+          export APACHE_LOG_PATH=/var/log/apache2
 
           # infortrend storage link check
           ping -q -c1 $IFT_RAID_IP > /dev/null
@@ -55,8 +57,6 @@
               if [[ ! -f /home/ift/cache/files/Fedora-x86_64-20-20140618-sda.qcow2 ]]; then
                   cp /home/ift/cache/files/Fedora-x86_64-20-20140618-sda.qcow2 $BASE/new/devstack/files/
               fi
-              # clear log if exist previous job's log
-              rm $BASE/logs/* -r
 
               echo "Configure the local.conf file to properly setup hp lefthand driver in cinder.conf"
               cat <<EOF >$BASE/new/devstack/local.conf
@@ -122,6 +122,11 @@
 
           # in safe-devstack-vm-gate-wrap, move logs to jenkins workspace
           sed -i 's/exit $RETVAL/sudo mv $BASE\/logs\/* $WORKSPACE\/logs\nexit $RETVAL/g' safe-devstack-vm-gate-wrap.sh
+
+          # clear log if exist previous job's log
+          rm -rf $DEVSTACK_LOG_FILE_PATH 
+          sudo rm -rf $APACHE_LOG_PATH
+          sudo mkdir $APACHE_LOG_PATH
 
           # execute jobs!
           ./safe-devstack-vm-gate-wrap.sh

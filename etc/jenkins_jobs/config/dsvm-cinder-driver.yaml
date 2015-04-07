@@ -25,7 +25,7 @@
           export IFT_RAID_POOL_NAME=LV-1
           export IFT_RAID_LOG_IN=infortrend
           export IFT_RAID_PASSWORD=111111
-          export IFT_RAID_IP=172.27.112.166
+          export IFT_RAID_IP=172.27.112.184
           export DEVSTACK_LOG_FILE_PATH=/opt/stack/logs/*
           export APACHE_LOG_PATH=/var/log/apache2
 
@@ -124,7 +124,7 @@
           sed -i 's/exit $RETVAL/sudo mv $BASE\/logs\/* $WORKSPACE\/logs\nexit $RETVAL/g' safe-devstack-vm-gate-wrap.sh
 
           # clear log if exist previous job's log
-          rm -rf $DEVSTACK_LOG_FILE_PATH 
+          sudo rm -rf $DEVSTACK_LOG_FILE_PATH 
           sudo rm -rf $APACHE_LOG_PATH
           sudo mkdir $APACHE_LOG_PATH
 
